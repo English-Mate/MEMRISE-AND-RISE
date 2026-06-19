@@ -3,6 +3,7 @@ let vocabularyLearned = {};
 let timerInterval;
 let timeLeft = 2 * 60 * 60; // 2 hours in seconds
 
+// 🎯 Custom System Instructions for slang conversions
 const SYSTEM_INSTRUCTION = `
 You are a cool, casual AI podcast co-host who teaches slang and idioms naturally. 
 Keep responses brief (2-3 sentences max). Inject at least one slang word or idiom naturally into every response.
@@ -73,7 +74,8 @@ async function handleSend() {
     }
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${targetKey}`, {
+        // 🚀 MODEL UPDATED TO GEMINI-2.5-FLASH FOR PRODUCTION
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${targetKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
