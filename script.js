@@ -1,23 +1,128 @@
-const audio = document.getElementById('podcast-audio');
-const slangWord = document.querySelector('.slang-word');
-const defBox = document.getElementById('definition-box');
-const defText = document.getElementById('definition-text');
-const closeBtn = document.getElementById('close-btn');
+let conversationHistory = [];
+let vocabularyLearned = {}; 
+let timerInterval;
+let timeLeft = 2 * 60 * 60; 
 
-// When the user clicks the slang phrase
-slangWord.addEventListener('click', () => {
-    // 1. Pause the audio automatically
-    audio.pause();
-    
-    // 2. Extract definition from HTML data attribute
-    const definition = slangWord.getAttribute('data-definition');
-    
-    // 3. Populate and reveal the box
-    defText.textContent = definition;
-    defBox.classList.remove('hidden');
+const SYSTEM_INSTRUCTION = `
+You are a cool, casual AI podcast co-host who teaches slang naturally. 
+Keep responses brief (2-3 sentences max). Inject 1 slang word naturally.
+Format every slang word exactly like this: [slang: WORD | DEFINITION].
+`;
+
+const chatWindow = document.getElementById('chat-window');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const endBtn = document.getElementById('end-btn');
+const timerDisplay = document.getElementById('timer');
+const podcastContainer = document.getElementById('podcast-container');
+const summaryContainer = document.getElementById('summary-container');
+
+// Start the timer immediately when the page loads
+startTimer();
+
+// Secret Easter Egg: Press 'Ctrl + Shift + K' together to open the hidden key manager!
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        document.getElementById('admin-vault').classList.toggle('hidden');
+    }
 });
 
-// Hide the box when clicking "Got it!"
-closeBtn.addEventListener('click', () => {
-    defBox.classList.add('hidden');
+// Save the key when you click the hidden save button
+document.getElementById('save-master-btn').addEventListener('click', () => {
+    const key = document.getElementById('master-key-input').value.trim();
+    if(key) {
+        localStorage.setItem('shared_gemini_key', btoa(key)); // obfuscates key locally
+        alert("Master key securely updated for this application!");
+        document.getElementById('admin-vault').classList.add('hidden');
+    }
 });
+
+async function handleSend() {
+    const text = userInput.value.trim();
+    if (!text) return;
+
+    appendMessage("You", text, "user-bubble");
+    userInput.value = "";
+    conversationHistory.push({ role: "user", parts: [{ text: text }] });
+
+    const typingBubble = appendMessage("Gemini", "Thinking...", "ai-bubble");
+
+    // Pull the active key from storage automatically
+    const targetKey = atob(localStorage.getItem('shared_gemini_key') || "");
+    if (!targetKey) {
+        typingBubble.textContent = "System configuration missing. (Admin: Press Ctrl+Shift+K to link API key)";
+        return;
+    }
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${targetKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: conversationHistory,
+                systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] }
+            })
+        });
+
+        const data = await response.json();
+        const rawReply = data.candidates[0].content.parts[0].text;
+        
+        const cleanedReply = parseAndStoreSlang(rawReply);
+        typingBubble.innerHTML = `<strong>Gemini:</strong> ${cleanedReply}`;
+        conversationHistory.push({ role: "model", parts: [{ text: rawReply }] });
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    } catch (error) {
+        typingBubble.textContent = "Oops! Gemini ran into a tiny glitch. Try again.";
+    }
+}
+
+sendBtn.addEventListener('click', handleSend);
+userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
+
+function parseAndStoreSlang(text) {
+    const regex = /\[slang:\s*([^|]+)\s*\|\s*([^\]]+)\]/g;
+    let match;
+    let newText = text;
+    while ((match = regex.exec(text)) !== null) {
+        const word = match[1].trim();
+        const definition = match[2].trim();
+        vocabularyLearned[word] = definition;
+        newText = newText.replace(match[0], `<span class="slang-word" onclick="alert('${word}: ${definition}')">${word}</span>`);
+    }
+    return newText;
+}
+
+function startTimer() {
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) { clearInterval(timerInterval); endPodcast(); }
+        let hrs = Math.floor(timeLeft / 3600).toString().padStart(2, '0');
+        let mins = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0');
+        let secs = (timeLeft % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `${hrs}:${mins}:${secs}`;
+    }, 1000);
+}
+
+function endPodcast() {
+    clearInterval(timerInterval);
+    podcastContainer.classList.add('hidden');
+    summaryContainer.classList.remove('hidden');
+    const listElement = document.getElementById('slang-summary-list');
+    listElement.innerHTML = "";
+    Object.keys(vocabularyLearned).forEach(word => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${word}</strong>: ${vocabularyLearned[word]}`;
+        listElement.appendChild(li);
+    });
+}
+endBtn.addEventListener('click', endPodcast);
+
+function appendMessage(sender, text, className) {
+    const div = document.createElement('p');
+    div.className = className;
+    div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatWindow.appendChild(div);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+    return div;
+}
