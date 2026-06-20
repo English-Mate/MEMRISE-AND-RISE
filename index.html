@@ -3,19 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Slang Podcast Partner</title>
+    <title>AI Slang & Grammar Coach</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="podcast-container" class="container">
+    <div id="topic-container" class="container">
+        <h2>Choose Your Practice Topic 🎧</h2>
+        <p>Select a scenario to practice natural idioms, vocabulary, and grammar correction:</p>
+        <div class="topic-grid">
+            <button class="topic-btn" onclick="selectTopic('Daily Routine & Habits')">⏰ Daily Routine</button>
+            <button class="topic-btn" onclick="selectTopic('Social Media & Gaming')">🎮 Internet & Media</button>
+            <button class="topic-btn" onclick="selectTopic('Work, Hustle & Productivity')">💼 Work & Productivity</button>
+            <button class="topic-btn" onclick="selectTopic('Travel, Food & Shopping')">✈️ Travel & Lifestyle</button>
+        </div>
+    </div>
+
+    <div id="podcast-container" class="container hidden">
         <div class="podcast-header">
-            <h2>Live Slang Podcast</h2>
+            <div>
+                <h2 id="podcast-title">Live Slang Podcast</h2>
+                <small id="active-topic" style="color: #64748b; font-weight: 600;"></small>
+            </div>
             <div id="timer">02:00:00</div>
         </div>
         
         <div id="chat-window">
-            <p class="ai-bubble"><strong>Gemini:</strong> Hey there! Ready to learn some wild new slang today? Tell me what you've been up to lately!</p>
+            <p class="ai-bubble"><strong>Gemini:</strong> Hey there! Ready to jump into our topic? Tell me what's on your mind!</p>
         </div>
 
         <div class="input-area">
@@ -27,8 +41,8 @@
     </div>
 
     <div id="summary-container" class="container hidden">
-        <h2>Podcast Wrapped 🎧</h2>
-        <p>Great session! Here are the slang words Gemini taught you today:</p>
+        <h2>Session Wrapped 🎧</h2>
+        <p>Great session! Here are the expressions you worked on today:</p>
         <ul id="slang-summary-list"></ul>
         <button onclick="location.reload()">Start New Session</button>
     </div>
@@ -40,5 +54,5 @@
     </div>
 
 </body>
-<script src="script.js"></script>
+<script src="script.js?v=9"></script>
 </html>
