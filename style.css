@@ -23,6 +23,7 @@ body {
     box-sizing: border-box;
 }
 
+/* MAIN CARD CONTAINER STYLING */
 .card {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
@@ -36,6 +37,7 @@ body {
 
 .hidden { display: none !important; }
 
+/* USER PROFILE HEADER */
 .user-profile-header {
     display: flex;
     justify-content: space-between;
@@ -73,6 +75,7 @@ body {
     font-weight: bold;
 }
 
+/* MASTER CREDIT PANEL ADMIN WORKSPACE */
 .admin-vault {
     background-color: var(--admin-blue);
     border: 1px solid #2854c3;
@@ -88,7 +91,7 @@ body {
     gap: 10px;
 }
 
-/* RESPONSIVE SCENARIO SELECTION GRID */
+/* FIXED: RESPONSIVE SCENARIO SELECTION GRID LAYOUT */
 .scenario-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -118,6 +121,7 @@ body {
     transform: translateY(-2px);
 }
 
+/* FIXED: UNALIGNED COMPONENT FORM INPUT ELEMENTS */
 input[type="text"], input[type="email"], input[type="number"], input[type="password"] {
     background-color: #0d1117;
     border: 1px solid var(--border-color);
@@ -129,6 +133,7 @@ input[type="text"], input[type="email"], input[type="number"], input[type="passw
     box-sizing: border-box;
 }
 
+/* FIXED: ACTION BUTTONS EXPANSION AND SPACING RULES */
 button {
     background-color: var(--primary-blue);
     color: white;
@@ -138,15 +143,34 @@ button {
     font-size: 1rem;
     cursor: pointer;
     font-weight: bold;
+    width: 100%;
+    box-sizing: border-box;
+    display: block;
 }
 
 button:hover { background-color: #388bfd; }
 
+#login-container input {
+    margin-bottom: 16px;
+}
+
+#otp-verification-box {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+#otp-verification-box input {
+    margin-bottom: 16px;
+}
+
+/* ADMIN PANEL OVERRIDES */
 #admin-target-email { flex: 2; }
 #admin-credit-amount { flex: 1; }
-#admin-grant-btn { background-color: var(--success-green); }
+#admin-grant-btn { background-color: var(--success-green); width: auto; }
 #admin-grant-btn:hover { background-color: #2ea043; }
 
+/* CHAT AREA AND STUDIO COMPONENT DESIGN ELEMENTS */
 .chat-box {
     background-color: #0d1117;
     border: 1px solid var(--border-color);
@@ -161,6 +185,9 @@ button:hover { background-color: #388bfd; }
 .ai-bubble { text-align: left; color: #56d364; margin: 8px 0; }
 
 .chat-input-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.chat-input-row input { flex: 1; }
+.chat-input-row button { width: auto; }
+
 .danger-btn { background-color: var(--danger-red); width: 100%; }
 .danger-btn:hover { background-color: #f85149; }
 .secondary-btn { background-color: #21262d; border: 1px solid var(--border-color); color: var(--text-main); margin-top: 10px; width: 100%; }
