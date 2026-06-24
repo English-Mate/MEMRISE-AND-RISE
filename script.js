@@ -33,11 +33,12 @@ if (SpeechRecognition) {
     recognition.lang = 'en-US';
 }
 
+// DOM ELEMENTS (Make sure these match your HTML ID tags!)
 const loginContainer = document.getElementById('login-container');
 const topicContainer = document.getElementById('topic-container');
 const emailInput = document.getElementById('email-input');
-const otpVerificationBox = document.getElementById('otp-verification-box');
-const otpInput = document.getElementById('otp-input');
+const passwordInput = document.getElementById('password-input'); // Added for Password
+const usernameInput = document.getElementById('username-input'); // Added for Custom Name
 const creditBadge = document.getElementById('credit-badge');
 const superAdminPanel = document.getElementById('super-admin-panel');
 const talkBtn = document.getElementById('talk-btn');
@@ -48,41 +49,70 @@ const chatWindow = document.getElementById('chat-window');
 window.addEventListener('DOMContentLoaded', async () => {
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session?.user) {
-        await syncUserProfile(data.session.user.email);
+        await syncUserProfile(data.session.user);
     }
 });
 
-// STEP 1: Request OTP Security Link
-document.getElementById('send-otp-btn').addEventListener('click', async () => {
+// ACTION 1: REGISTER A NEW ACCOUNT (Sign Up)
+document.getElementById('signup-btn').addEventListener('click', async () => {
     const email = emailInput.value.trim().toLowerCase();
-    if (!email || !email.includes('@')) return alert("Please enter a valid email address.");
-    const { error } = await supabaseClient.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
-    if (error) return alert("Failed to dispatch code: " + error.message);
-    alert(`A numeric token has been routed to ${email}!`);
-    if (otpVerificationBox) otpVerificationBox.classList.remove('hidden');
+    const password = passwordInput.value.trim();
+    const chosenName = usernameInput.value.trim();
+
+    if (!email || !password || !chosenName) {
+        return alert("Please fill out your email, password, and your name to register.");
+    }
+    if (password.length < 6) {
+        return alert("Password must be at least 6 characters long.");
+    }
+
+    const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+            data: {
+                display_name: chosenName // Saves custom name inside user metadata metadata
+            }
+        }
+    });
+
+    if (error) return alert("Registration failed: " + error.message);
+    
+    alert("Account created! Please open your Gmail app and click the confirmation link inside the message we sent to verify your address.");
 });
 
-// STEP 2: Authenticate OTP Code
-document.getElementById('verify-otp-btn').addEventListener('click', async () => {
+// ACTION 2: LOGIN TO EXISTING ACCOUNT
+document.getElementById('login-btn').addEventListener('click', async () => {
     const email = emailInput.value.trim().toLowerCase();
-    const token = otpInput.value.trim();
-    if (!email || !token) return alert("Please type your email and the code.");
-    const { data, error } = await supabaseClient.auth.verifyOtp({ email: email, token: token, type: 'email' });
-    if (error) return alert("Verification Failed: " + error.message);
-    if (data.user) await syncUserProfile(data.user.email);
+    const password = passwordInput.value.trim();
+
+    if (!email || !password) {
+        return alert("Please enter both your email and password to log in.");
+    }
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (error) return alert("Login failed: " + error.message);
+    if (data.user) {
+        await syncUserProfile(data.user);
+    }
 });
 
 // FIXED DATA PAYLOAD SYNCHRONIZATION 
-async function syncUserProfile(email) {
-    currentUserEmail = email;
-    currentUserName = email.split('@')[0];
+async function syncUserProfile(authUser) {
+    currentUserEmail = authUser.email;
+    // Fallback order: Explicitly chosen name metadata -> split email username
+    currentUserName = authUser.user_metadata?.display_name || authUser.email.split('@')[0];
     
-    const { data: authData } = await supabaseClient.auth.getUser();
-    const userId = authData?.user?.id;
+    const userId = authUser.id;
     if (!userId) return alert("Authentication session sync failure.");
 
     let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', userId).maybeSingle();
     
+    // If user layout row profile is not created yet, initialize it
     if (!profile) {
         const initialCredits = (currentUserEmail === ADMIN_EMAIL) ? 999999 : 6;
         const { data: newProfile, error: insertError } = await supabaseClient
