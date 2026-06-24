@@ -33,114 +33,90 @@ if (SpeechRecognition) {
     recognition.lang = 'en-US';
 }
 
-// DOM ELEMENTS (Make sure these match your HTML ID tags!)
+// DOM ELEMENTS
 const loginContainer = document.getElementById('login-container');
 const topicContainer = document.getElementById('topic-container');
-const emailInput = document.getElementById('email-input');
-const passwordInput = document.getElementById('password-input'); // Added for Password
-const usernameInput = document.getElementById('username-input'); // Added for Custom Name
+const nameSetupContainer = document.getElementById('name-setup-container'); // Container for setting name
 const creditBadge = document.getElementById('credit-badge');
 const superAdminPanel = document.getElementById('super-admin-panel');
 const talkBtn = document.getElementById('talk-btn');
 const voiceStatusLabel = document.getElementById('voice-status-label');
 const chatWindow = document.getElementById('chat-window');
 
-// AUTO LOGIN SYNC FOR RETURNING VALID SESSIONS (7 DAYS PERSISTED)
+// AUTO LOGIN SYNC FOR RETURNING VALID SESSIONS / GOOGLE REDIRECTS
 window.addEventListener('DOMContentLoaded', async () => {
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session?.user) {
-        await syncUserProfile(data.session.user);
+        await handleUserRouting(data.session.user);
     }
 });
 
-// ACTION 1: REGISTER A NEW ACCOUNT (Sign Up)
-document.getElementById('signup-btn').addEventListener('click', async () => {
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value.trim();
-    const chosenName = usernameInput.value.trim();
-
-    if (!email || !password || !chosenName) {
-        return alert("Please fill out your email, password, and your name to register.");
-    }
-    if (password.length < 6) {
-        return alert("Password must be at least 6 characters long.");
-    }
-
-    const { data, error } = await supabaseClient.auth.signUp({
-        email: email,
-        password: password,
+// ACTION: TRIGGER GOOGLE LOGIN SIGN IN
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-            data: {
-                display_name: chosenName // Saves custom name inside user metadata metadata
-            }
+            redirectTo: window.location.origin + window.location.pathname
         }
     });
-
-    if (error) return alert("Registration failed: " + error.message);
-    
-    alert("Account created! Please open your Gmail app and click the confirmation link inside the message we sent to verify your address.");
+    if (error) alert("Google Login Failed: " + error.message);
 });
 
-// ACTION 2: LOGIN TO EXISTING ACCOUNT
-document.getElementById('login-btn').addEventListener('click', async () => {
-    const email = emailInput.value.trim().toLowerCase();
-    const password = passwordInput.value.trim();
-
-    if (!email || !password) {
-        return alert("Please enter both your email and password to log in.");
-    }
-
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
-
-    if (error) return alert("Login failed: " + error.message);
-    if (data.user) {
-        await syncUserProfile(data.user);
-    }
-});
-
-// FIXED DATA PAYLOAD SYNCHRONIZATION 
-async function syncUserProfile(authUser) {
+// ROUTING LOADER: Check if user already exists in profiles table
+async function handleUserRouting(authUser) {
     currentUserEmail = authUser.email;
-    // Fallback order: Explicitly chosen name metadata -> split email username
-    currentUserName = authUser.user_metadata?.display_name || authUser.email.split('@')[0];
-    
     const userId = authUser.id;
-    if (!userId) return alert("Authentication session sync failure.");
 
+    // Check if a profile already exists for this unique ID
     let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', userId).maybeSingle();
-    
-    // If user layout row profile is not created yet, initialize it
+
     if (!profile) {
-        const initialCredits = (currentUserEmail === ADMIN_EMAIL) ? 999999 : 6;
-        const { data: newProfile, error: insertError } = await supabaseClient
-            .from('profiles')
-            .insert([{ 
-                id: userId,
-                username: currentUserName, 
-                email: currentUserEmail, 
-                credits: initialCredits 
-            }])
-            .select()
-            .maybeSingle();
+        // Hide login, show the unique screen asking for their name choice
+        loginContainer.classList.add('hidden');
+        nameSetupContainer.classList.remove('hidden');
+        
+        // Listen for the name save execution submission
+        document.getElementById('save-name-btn').onclick = async () => {
+            const chosenName = document.getElementById('new-username-input').value.trim();
+            if (!chosenName) return alert("Please type your name to continue!");
             
-        if (insertError) {
-            console.error("Profile Generation Fault:", insertError);
-            return alert("Profile row provisioning error: " + insertError.message);
-        }
-        profile = newProfile;
+            const initialCredits = (currentUserEmail === ADMIN_EMAIL) ? 999999 : 6;
+            
+            const { data: newProfile, error: insertError } = await supabaseClient
+                .from('profiles')
+                .insert([{ 
+                    id: userId,
+                    username: chosenName, 
+                    email: currentUserEmail, 
+                    credits: initialCredits 
+                }])
+                .select()
+                .maybeSingle();
+
+            if (insertError) {
+                return alert("Profile row provisioning error: " + insertError.message);
+            }
+            
+            nameSetupContainer.classList.add('hidden');
+            proceedToApp(newProfile);
+        };
+    } else {
+        // Existing user found, skip screen directly to topic studio
+        proceedToApp(profile);
     }
+}
+
+function proceedToApp(profile) {
+    currentUserName = profile.username || "Student";
+    currentUserCredits = profile.credits;
     
-    currentUserCredits = profile ? profile.credits : 6;
     document.getElementById('display-username').textContent = currentUserName;
     document.getElementById('user-email-label').textContent = currentUserEmail;
     updateCreditDisplay();
     
     if (currentUserEmail === ADMIN_EMAIL) superAdminPanel.classList.remove('hidden');
     loginContainer.classList.add('hidden');
-    topicContainer.classList.remove('hidden');
+    topicContainer.remove('hidden');
 }
 
 function updateCreditDisplay() {
